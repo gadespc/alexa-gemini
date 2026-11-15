@@ -110,3 +110,11 @@ def test_ask_envia_busqueda_cuando_se_activa():
     http.post.return_value = _respuesta("ok")
     gemini.ask("hola", [], "clave", "m", search=True, http=http)
     assert http.post.call_args.kwargs["json"]["tools"] == [{"google_search": {}}]
+
+
+def test_ask_sin_cupo_de_busqueda_reintenta_sin_busqueda():
+    http = Mock()
+    http.post.side_effect = [_respuesta("", status=429), _respuesta("ok")]
+    texto, _ = gemini.ask("hola", [], "clave", "m", search=True, http=http)
+    assert texto == "ok"
+    assert "tools" not in http.post.call_args.kwargs["json"]

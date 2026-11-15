@@ -60,12 +60,18 @@ def ask(question, history, api_key, model, system="", thinking_level="", search=
     """Devuelve (respuesta, historial ampliado) o lanza GeminiError."""
     if not api_key:
         raise GeminiError("Falta GOOGLE_API_KEY")
-    response = http.post(
-        API_URL.format(model=model),
-        json=build_payload(history, question, system, thinking_level, search),
-        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
-        timeout=TIMEOUT_SECONDS,
-    )
+    def post(with_search):
+        return http.post(
+            API_URL.format(model=model),
+            json=build_payload(history, question, system, thinking_level, with_search),
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            timeout=TIMEOUT_SECONDS,
+        )
+
+    response = post(search)
+    if search and response.status_code == 429:
+        # Sin cupo de búsqueda en Google: mejor responder sin ella que fallar.
+        response = post(False)
     if response.status_code != 200:
         raise GeminiError(f"HTTP {response.status_code}")
     text = extract_text(response.json())

@@ -17,11 +17,8 @@ logger.setLevel(logging.INFO)
 
 MAX_HISTORY = 12
 SYSTEM_PROMPT = (
-    "Eres un asistente de voz en un altavoz Alexa. Hoy es {hoy}. Responde en español de España "
-    "con un máximo de 40 palabras: ve directo al dato clave (cifras, fechas, nombres, precios) y "
-    "termina siempre la última frase. Usa la búsqueda de Google para datos actuales o que puedan "
-    "haber cambiado. Si no lo sabes con seguridad, dilo en vez de inventar. Sin listas, emojis ni "
-    "markdown. Si piden más detalle, amplía hasta 120 palabras."
+    "Asistente de voz Alexa. Hoy es {hoy}. Responde en español, máximo 40 palabras, directo al dato "
+    "clave y real. Si no lo sabes, dilo. Sin listas ni markdown."
 )
 
 
