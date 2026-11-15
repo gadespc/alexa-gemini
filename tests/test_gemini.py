@@ -83,3 +83,30 @@ def test_ask_con_respuesta_vacia_lanza_gemini_error():
 def test_ask_sin_clave_lanza_gemini_error():
     with pytest.raises(gemini.GeminiError):
         gemini.ask("hola", [], "", "m", http=Mock())
+
+
+def test_payload_activa_busqueda_en_google_si_se_pide():
+    assert gemini.build_payload([], "hola", "s", "", search=True)["tools"] == [{"google_search": {}}]
+    assert "tools" not in gemini.build_payload([], "hola", "s", "")
+
+
+def test_payload_deja_margen_de_tokens_para_el_razonamiento():
+    assert gemini.build_payload([], "hola", "s", "low")["generationConfig"]["maxOutputTokens"] >= 2048
+
+
+def test_extract_text_cortado_por_limite_termina_en_frase_completa():
+    data = {"candidates": [{"finishReason": "MAX_TOKENS",
+                            "content": {"parts": [{"text": "Empezó en 1939. Terminó en 1945 con la rendi"}]}}]}
+    assert gemini.extract_text(data) == "Empezó en 1939."
+
+
+def test_extract_text_cortado_sin_frase_completa_lo_devuelve_tal_cual():
+    data = {"candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "Empezó en"}]}}]}
+    assert gemini.extract_text(data) == "Empezó en"
+
+
+def test_ask_envia_busqueda_cuando_se_activa():
+    http = Mock()
+    http.post.return_value = _respuesta("ok")
+    gemini.ask("hola", [], "clave", "m", search=True, http=http)
+    assert http.post.call_args.kwargs["json"]["tools"] == [{"google_search": {}}]

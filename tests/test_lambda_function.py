@@ -82,3 +82,23 @@ def test_parar_se_despide_y_cierra():
 def test_ayuda_explica_uso():
     salida = _llamar(_intent("AMAZON.HelpIntent"))
     assert "pregunta" in _voz(salida).lower()
+
+
+def test_instrucciones_piden_brevedad_datos_reales_y_fecha_de_hoy():
+    texto = lambda_function.system_prompt(lambda_function.date(2026, 11, 15))
+    assert "15/11/2026" in texto
+    assert "40 palabras" in texto
+
+
+def test_chat_usa_busqueda_por_defecto(monkeypatch):
+    monkeypatch.delenv("GEMINI_SEARCH", raising=False)
+    with patch.object(gemini, "ask", return_value=("ok", [])) as ask:
+        _llamar(_intent("ChatIntent", "x"))
+    assert ask.call_args.kwargs["search"] is True
+
+
+def test_chat_sin_busqueda_si_se_desactiva(monkeypatch):
+    monkeypatch.setenv("GEMINI_SEARCH", "0")
+    with patch.object(gemini, "ask", return_value=("ok", [])) as ask:
+        _llamar(_intent("ChatIntent", "x"))
+    assert ask.call_args.kwargs["search"] is False

@@ -1,6 +1,7 @@
 """Skill de Alexa que responde con Google Gemini, en español."""
 import logging
 import os
+from datetime import date
 
 import ask_sdk_core.utils as ask_utils
 import requests
@@ -16,10 +17,16 @@ logger.setLevel(logging.INFO)
 
 MAX_HISTORY = 12
 SYSTEM_PROMPT = (
-    "Eres un asistente de voz en un altavoz Alexa. Responde siempre en español de España, "
-    "en 1 a 3 frases claras, sin listas, sin emojis y sin formato markdown. "
-    "Si la pregunta es ambigua, da la respuesta más probable."
+    "Eres un asistente de voz en un altavoz Alexa. Hoy es {hoy}. Responde en español de España "
+    "con un máximo de 40 palabras: ve directo al dato clave (cifras, fechas, nombres, precios) y "
+    "termina siempre la última frase. Usa la búsqueda de Google para datos actuales o que puedan "
+    "haber cambiado. Si no lo sabes con seguridad, dilo en vez de inventar. Sin listas, emojis ni "
+    "markdown. Si piden más detalle, amplía hasta 120 palabras."
 )
+
+
+def system_prompt(today):
+    return SYSTEM_PROMPT.format(hoy=today.strftime("%d/%m/%Y"))
 REPROMPT = "¿Algo más?"
 NOT_UNDERSTOOD = "Perdona, no te he entendido. ¿Puedes repetirlo?"
 
@@ -29,6 +36,7 @@ def _settings():
         "api_key": os.getenv("GOOGLE_API_KEY", ""),
         "model": os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
         "thinking_level": os.getenv("GEMINI_THINKING", "low"),
+        "search": os.getenv("GEMINI_SEARCH", "1") != "0",
     }
 
 
@@ -58,7 +66,8 @@ class ChatIntentHandler(AbstractRequestHandler):
         try:
             answer, history = gemini.ask(
                 question, attributes.get("history", []), settings["api_key"], settings["model"],
-                system=SYSTEM_PROMPT, thinking_level=settings["thinking_level"],
+                system=system_prompt(date.today()), thinking_level=settings["thinking_level"],
+                search=settings["search"],
             )
         except (gemini.GeminiError, requests.RequestException, ValueError):
             logger.exception("Fallo al consultar Gemini")

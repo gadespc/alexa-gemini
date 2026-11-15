@@ -16,7 +16,7 @@ Uso: «Alexa, abre modo gemini» y preguntar. «Para» para salir.
 3. *Build Skill*. Pestaña *Code* → en `lambda/` crear `.env` con `GOOGLE_API_KEY=<clave>` → *Save* → *Deploy*.
 4. Pestaña *Test* → *Development*. Funciona en todos los Echo de la cuenta.
 
-Variables opcionales en `.env`: `GEMINI_MODEL` (por defecto `gemini-3.5-flash`) y `GEMINI_THINKING`
+Variables opcionales en `.env`: `GEMINI_MODEL` (por defecto `gemini-3.5-flash`), `GEMINI_SEARCH=0` (sin búsqueda en Google) y `GEMINI_THINKING`
 (`low`; vacío para no enviarlo).
 
 ## Desarrollo

@@ -6,10 +6,12 @@ import requests
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 # Alexa corta a los 8 s: dejamos margen para responder.
 TIMEOUT_SECONDS = 6.5
-MAX_OUTPUT_TOKENS = 400
+# Incluye los tokens de razonamiento: con poco margen la respuesta se corta.
+MAX_OUTPUT_TOKENS = 2048
 
 _MARKDOWN = re.compile(r"[*_`#]+|^\s*(?:[-•>]|\d+\.)\s+", re.MULTILINE)
 _SPACES = re.compile(r"\s+")
+_LAST_SENTENCE = re.compile(r"^(.*[.!?])\s", re.DOTALL)
 
 
 class GeminiError(Exception):
@@ -20,21 +22,28 @@ def _message(role, text):
     return {"role": role, "parts": [{"text": text}]}
 
 
-def build_payload(history, question, system, thinking_level):
+def build_payload(history, question, system, thinking_level, search=False):
     config = {"maxOutputTokens": MAX_OUTPUT_TOKENS}
     if thinking_level:
         config["thinkingConfig"] = {"thinkingLevel": thinking_level}
-    return {
+    payload = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": list(history) + [_message("user", question)],
         "generationConfig": config,
     }
+    if search:
+        payload["tools"] = [{"google_search": {}}]
+    return payload
 
 
 def extract_text(data):
     candidates = data.get("candidates") or [{}]
     parts = candidates[0].get("content", {}).get("parts", [])
-    return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
+    text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
+    if candidates[0].get("finishReason") == "MAX_TOKENS":
+        complete = _LAST_SENTENCE.match(text + " ")
+        text = complete.group(1) if complete else text
+    return text
 
 
 def clean_for_speech(text):
@@ -47,13 +56,13 @@ def trim_history(history, max_messages):
     return history[-max_messages:]
 
 
-def ask(question, history, api_key, model, system="", thinking_level="", http=requests):
+def ask(question, history, api_key, model, system="", thinking_level="", search=False, http=requests):
     """Devuelve (respuesta, historial ampliado) o lanza GeminiError."""
     if not api_key:
         raise GeminiError("Falta GOOGLE_API_KEY")
     response = http.post(
         API_URL.format(model=model),
-        json=build_payload(history, question, system, thinking_level),
+        json=build_payload(history, question, system, thinking_level, search),
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
         timeout=TIMEOUT_SECONDS,
     )
