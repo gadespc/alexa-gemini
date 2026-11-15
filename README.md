@@ -19,6 +19,15 @@ Uso: «Alexa, abre modo gemini» y preguntar. «Para» para salir.
 Variables opcionales en `.env`: `GEMINI_MODEL` (por defecto `gemini-3.5-flash`), `GEMINI_SEARCH=0` (sin búsqueda en Google) y `GEMINI_THINKING`
 (`low`; vacío para no enviarlo).
 
+## Mantenimiento
+
+- El código que corre es el del editor de la consola (pestaña *Code*); no se sincroniza con GitHub.
+  Tras un cambio aquí: copiar `lambda/*.py` al editor → *Save* → *Deploy*.
+- Errores: *Code* → *CloudWatch Logs*.
+- Trampas conocidas: la importación deja la invocación en «change me» (*Build* → *Invocations* →
+  «modo gemini» → *Build skill*); el runtime es Python 3.8 y exige `urllib3` 1.x; la búsqueda en
+  Google da 429 sin facturación en AI Studio y la skill responde entonces sin ella.
+
 ## Desarrollo
 
 ```bash
