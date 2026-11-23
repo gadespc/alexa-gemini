@@ -3,14 +3,71 @@
     "languageModel": {
       "invocationName": "modo gemini",
       "intents": [
-        { "name": "AMAZON.CancelIntent", "samples": [] },
-        { "name": "AMAZON.HelpIntent", "samples": [] },
-        { "name": "AMAZON.StopIntent", "samples": ["adiós", "ya está", "termina"] },
-        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
-        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": [
+            "adiós",
+            "ya está",
+            "termina"
+          ]
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": [
+            "escríbelo",
+            "apúntalo",
+            "confirmo"
+          ]
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": [
+            "cancela",
+            "déjalo"
+          ]
+        },
+        {
+          "name": "ApuntarIntent",
+          "slots": [
+            {
+              "name": "nota",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "apunta {nota}",
+            "apunta para claude {nota}",
+            "anota {nota}",
+            "nota para claude {nota}",
+            "dile a claude {nota}",
+            "apúntale a claude {nota}",
+            "para claude {nota}"
+          ]
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
         {
           "name": "ChatIntent",
-          "slots": [{ "name": "query", "type": "AMAZON.Person" }],
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.Person"
+            }
+          ],
           "samples": [
             "{query}",
             "pregunta {query}",

@@ -9,6 +9,7 @@ from ask_sdk_core.dispatch_components import AbstractExceptionHandler, AbstractR
 from ask_sdk_core.skill_builder import SkillBuilder
 from dotenv import load_dotenv
 
+import bandeja
 import gemini
 
 load_dotenv()
@@ -26,6 +27,9 @@ def system_prompt(today):
     return SYSTEM_PROMPT.format(hoy=today.strftime("%d/%m/%Y"))
 REPROMPT = "¿Algo más?"
 NOT_UNDERSTOOD = "Perdona, no te he entendido. ¿Puedes repetirlo?"
+CONFIRM = "¿Lo escribo? Di sí o no."
+YES_WORDS = {"sí", "si", "vale", "escríbelo", "apúntalo", "confirmo"}
+NO_WORDS = {"no", "cancela", "déjalo"}
 
 
 def _settings():
@@ -34,6 +38,8 @@ def _settings():
         "model": os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
         "thinking_level": os.getenv("GEMINI_THINKING", "low"),
         "search": os.getenv("GEMINI_SEARCH", "1") != "0",
+        "bandeja_token": os.getenv("BANDEJA_GITHUB_TOKEN", ""),
+        "bandeja_repo": os.getenv("BANDEJA_REPO", "gadespc/bandeja-alexa"),
     }
 
 
@@ -49,6 +55,58 @@ class LaunchRequestHandler(AbstractRequestHandler):
         return _listen(handler_input, "Hola, soy Gemini. Hazme una pregunta.", "¿Qué quieres saber?")
 
 
+def _session(handler_input):
+    return handler_input.attributes_manager.session_attributes
+
+
+def _confirm_note(handler_input):
+    note = _session(handler_input).pop("nota", None)
+    if not note:
+        return _listen(handler_input, "No tengo nada pendiente de apuntar.")
+    settings = _settings()
+    try:
+        bandeja.apuntar(note, settings["bandeja_token"], settings["bandeja_repo"])
+    except (bandeja.BandejaError, requests.RequestException):
+        logger.exception("Fallo al apuntar en la bandeja")
+        return _listen(handler_input, "Lo siento, no he podido apuntarlo. Prueba más tarde.")
+    return _listen(handler_input, "Apuntado. Claude lo verá en unos minutos.")
+
+
+def _discard_note(handler_input):
+    if _session(handler_input).pop("nota", None):
+        return _listen(handler_input, "Vale, no lo apunto.")
+    return _listen(handler_input, REPROMPT)
+
+
+class ApuntarIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return ask_utils.is_intent_name("ApuntarIntent")(handler_input)
+
+    def handle(self, handler_input):
+        slot = ask_utils.get_slot(handler_input, "nota")
+        note = slot.value if slot else None
+        if not note:
+            return _listen(handler_input, "¿Qué apunto para Claude? Di apunta y la nota.")
+        _session(handler_input)["nota"] = note
+        return _listen(handler_input, f"Voy a apuntar para Claude: {note}. {CONFIRM}", CONFIRM)
+
+
+class YesIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return ask_utils.is_intent_name("AMAZON.YesIntent")(handler_input)
+
+    def handle(self, handler_input):
+        return _confirm_note(handler_input)
+
+
+class NoIntentHandler(AbstractRequestHandler):
+    def can_handle(self, handler_input):
+        return ask_utils.is_intent_name("AMAZON.NoIntent")(handler_input)
+
+    def handle(self, handler_input):
+        return _discard_note(handler_input)
+
+
 class ChatIntentHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
         return ask_utils.is_intent_name("ChatIntent")(handler_input)
@@ -58,7 +116,14 @@ class ChatIntentHandler(AbstractRequestHandler):
         question = slot.value if slot else None
         if not question:
             return _listen(handler_input, NOT_UNDERSTOOD)
-        attributes = handler_input.attributes_manager.session_attributes
+        attributes = _session(handler_input)
+        if "nota" in attributes:
+            word = question.strip(" .¡!¿?").lower()
+            if word in YES_WORDS:
+                return _confirm_note(handler_input)
+            del attributes["nota"]
+            if word in NO_WORDS:
+                return _listen(handler_input, "Vale, no lo apunto.")
         settings = _settings()
         try:
             answer, history = gemini.ask(
@@ -78,7 +143,7 @@ class HelpIntentHandler(AbstractRequestHandler):
         return ask_utils.is_intent_name("AMAZON.HelpIntent")(handler_input)
 
     def handle(self, handler_input):
-        return _listen(handler_input, "Hazme cualquier pregunta y te respondo. Para salir, di para.")
+        return _listen(handler_input, "Hazme cualquier pregunta y te respondo. Para dejarle una nota a Claude, di apunta y la nota. Para salir, di para.")
 
 
 class FallbackIntentHandler(AbstractRequestHandler):
@@ -116,7 +181,8 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
 
 
 sb = SkillBuilder()
-for handler in (LaunchRequestHandler(), ChatIntentHandler(), HelpIntentHandler(), FallbackIntentHandler(),
+for handler in (LaunchRequestHandler(), ApuntarIntentHandler(), YesIntentHandler(), NoIntentHandler(),
+                ChatIntentHandler(), HelpIntentHandler(), FallbackIntentHandler(),
                 CancelOrStopIntentHandler(), SessionEndedRequestHandler()):
     sb.add_request_handler(handler)
 sb.add_exception_handler(CatchAllExceptionHandler())

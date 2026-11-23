@@ -1,5 +1,8 @@
 from unittest.mock import patch
 
+import pytest
+
+import bandeja
 import gemini
 import lambda_function
 
@@ -102,3 +105,71 @@ def test_chat_sin_busqueda_si_se_desactiva(monkeypatch):
     with patch.object(gemini, "ask", return_value=("ok", [])) as ask:
         _llamar(_intent("ChatIntent", "x"))
     assert ask.call_args.kwargs["search"] is False
+
+
+def _apuntar(nota=None):
+    slots = {"nota": {"name": "nota", "value": nota}} if nota is not None else {}
+    return {"type": "IntentRequest", "intent": {"name": "ApuntarIntent", "slots": slots}}
+
+
+def test_apuntar_pide_confirmacion_sin_escribir():
+    with patch.object(bandeja, "apuntar") as apuntar:
+        salida = _llamar(_apuntar("revisa la web"))
+    apuntar.assert_not_called()
+    assert "revisa la web" in _voz(salida)
+    assert "¿lo escribo?" in _voz(salida).lower()
+    assert salida["sessionAttributes"]["nota"] == "revisa la web"
+    assert salida["response"]["shouldEndSession"] is False
+
+
+def test_apuntar_sin_nota_pregunta_que_apuntar():
+    salida = _llamar(_apuntar())
+    assert "qué apunto" in _voz(salida).lower()
+    assert "nota" not in salida.get("sessionAttributes", {})
+
+
+def test_si_escribe_la_nota_pendiente(monkeypatch):
+    monkeypatch.setenv("BANDEJA_GITHUB_TOKEN", "tk")
+    monkeypatch.delenv("BANDEJA_REPO", raising=False)
+    with patch.object(bandeja, "apuntar") as apuntar:
+        salida = _llamar(_intent("AMAZON.YesIntent"), {"nota": "revisa la web"})
+    apuntar.assert_called_once_with("revisa la web", "tk", "gadespc/bandeja-alexa")
+    assert "apuntado" in _voz(salida).lower()
+    assert "nota" not in salida["sessionAttributes"]
+
+
+def test_si_con_error_avisa_y_no_guarda_la_nota():
+    with patch.object(bandeja, "apuntar", side_effect=bandeja.BandejaError("x")):
+        salida = _llamar(_intent("AMAZON.YesIntent"), {"nota": "a"})
+    assert "no he podido apuntarlo" in _voz(salida).lower()
+    assert "nota" not in salida["sessionAttributes"]
+
+
+def test_si_sin_nota_pendiente_no_escribe():
+    with patch.object(bandeja, "apuntar") as apuntar:
+        salida = _llamar(_intent("AMAZON.YesIntent"))
+    apuntar.assert_not_called()
+    assert "nada pendiente" in _voz(salida).lower()
+
+
+def test_no_descarta_la_nota():
+    with patch.object(bandeja, "apuntar") as apuntar:
+        salida = _llamar(_intent("AMAZON.NoIntent"), {"nota": "a"})
+    apuntar.assert_not_called()
+    assert "no lo apunto" in _voz(salida).lower()
+    assert "nota" not in salida["sessionAttributes"]
+
+
+@pytest.mark.parametrize("respuesta", ["sí", "Sí.", "vale", "escríbelo"])
+def test_si_dicho_como_pregunta_tambien_confirma(respuesta):
+    with patch.object(bandeja, "apuntar") as apuntar, patch.object(gemini, "ask") as ask:
+        _llamar(_intent("ChatIntent", respuesta), {"nota": "a"})
+    apuntar.assert_called_once()
+    ask.assert_not_called()
+
+
+def test_otra_pregunta_con_nota_pendiente_la_descarta_y_responde():
+    with patch.object(bandeja, "apuntar") as apuntar, patch.object(gemini, "ask", return_value=("ok", [])):
+        salida = _llamar(_intent("ChatIntent", "qué hora es"), {"nota": "a"})
+    apuntar.assert_not_called()
+    assert "nota" not in salida["sessionAttributes"]
