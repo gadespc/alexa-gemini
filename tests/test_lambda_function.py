@@ -173,3 +173,33 @@ def test_otra_pregunta_con_nota_pendiente_la_descarta_y_responde():
         salida = _llamar(_intent("ChatIntent", "qué hora es"), {"nota": "a"})
     apuntar.assert_not_called()
     assert "nota" not in salida["sessionAttributes"]
+
+
+@pytest.mark.parametrize("frase, nota", [
+    ("revisa las copias de seguridad y apúntalo en la bandeja de obsidian", "revisa las copias de seguridad"),
+    ("hazme un presupuesto para Ana y apúntalo", "hazme un presupuesto para Ana"),
+    ("apúntalo en la bandeja: llamar al gestor", "llamar al gestor"),
+    ("dile a claude que mire la web", "que mire la web"),
+    ("cambia el logo, anótalo para Claude", "cambia el logo"),
+    ("guarda en obsidian comprar discos duros", "comprar discos duros"),
+])
+def test_pedir_apuntar_en_una_frase_normal_pide_confirmacion(frase, nota):
+    with patch.object(bandeja, "apuntar") as apuntar, patch.object(gemini, "ask") as ask:
+        salida = _llamar(_intent("ChatIntent", frase))
+    apuntar.assert_not_called()
+    ask.assert_not_called()
+    assert salida["sessionAttributes"]["nota"] == nota
+    assert "¿lo escribo?" in _voz(salida).lower()
+
+
+@pytest.mark.parametrize("frase", ["qué es obsidian", "quién es claude monet", "cómo se apunta uno al paro"])
+def test_preguntas_normales_no_se_apuntan(frase):
+    with patch.object(gemini, "ask", return_value=("ok", [])) as ask:
+        salida = _llamar(_intent("ChatIntent", frase))
+    ask.assert_called_once()
+    assert "nota" not in salida["sessionAttributes"]
+
+
+def test_pedir_apuntar_sin_contenido_pregunta_que_apuntar():
+    salida = _llamar(_intent("ChatIntent", "apúntalo en la bandeja"))
+    assert "qué apunto" in _voz(salida).lower()

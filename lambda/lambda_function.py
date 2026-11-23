@@ -1,6 +1,7 @@
 """Skill de Alexa que responde con Google Gemini, en español."""
 import logging
 import os
+import re
 from datetime import date
 
 import ask_sdk_core.utils as ask_utils
@@ -30,6 +31,12 @@ NOT_UNDERSTOOD = "Perdona, no te he entendido. ¿Puedes repetirlo?"
 CONFIRM = "¿Lo escribo? Di sí o no."
 YES_WORDS = {"sí", "si", "vale", "escríbelo", "apúntalo", "confirmo"}
 NO_WORDS = {"no", "cancela", "déjalo"}
+_VERB = r"(?:ap[uú]nt|an[oó]t|gu[aá]rd|escr[ií]b|m[aá]nd|p[aá]s)\w*|dile"
+_DEST = r"(?:bandeja|obsidian|claude)(?:\s+de\s+(?:obsidian|claude))?"
+NOTE_REQUESTS = (
+    re.compile(rf"\b(?:y\s+)?(?:{_VERB})\s+(?:(?:lo|la|en|a|para|al)\s+)*{_DEST}\b", re.IGNORECASE),
+    re.compile(r"\b(?:y\s+)?(?:ap[uú]nt|an[oó]t)[aá]l[oa]\b", re.IGNORECASE),
+)
 
 
 def _settings():
@@ -78,17 +85,30 @@ def _discard_note(handler_input):
     return _listen(handler_input, REPROMPT)
 
 
+def extract_note(text):
+    """Nota pedida en una frase normal («… y apúntalo en la bandeja»); None si no pide apuntar."""
+    for pattern in NOTE_REQUESTS:
+        match = pattern.search(text)
+        if match:
+            rest = f"{text[:match.start()]} {text[match.end():]}"
+            return " ".join(rest.split()).strip(" ,.:;")
+    return None
+
+
+def _ask_to_confirm(handler_input, note):
+    if not note:
+        return _listen(handler_input, "¿Qué apunto para Claude? Di apunta y la nota.")
+    _session(handler_input)["nota"] = note
+    return _listen(handler_input, f"Voy a apuntar para Claude: {note}. {CONFIRM}", CONFIRM)
+
+
 class ApuntarIntentHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
         return ask_utils.is_intent_name("ApuntarIntent")(handler_input)
 
     def handle(self, handler_input):
         slot = ask_utils.get_slot(handler_input, "nota")
-        note = slot.value if slot else None
-        if not note:
-            return _listen(handler_input, "¿Qué apunto para Claude? Di apunta y la nota.")
-        _session(handler_input)["nota"] = note
-        return _listen(handler_input, f"Voy a apuntar para Claude: {note}. {CONFIRM}", CONFIRM)
+        return _ask_to_confirm(handler_input, slot.value if slot else None)
 
 
 class YesIntentHandler(AbstractRequestHandler):
@@ -124,6 +144,9 @@ class ChatIntentHandler(AbstractRequestHandler):
             del attributes["nota"]
             if word in NO_WORDS:
                 return _listen(handler_input, "Vale, no lo apunto.")
+        note = extract_note(question)
+        if note is not None:
+            return _ask_to_confirm(handler_input, note)
         settings = _settings()
         try:
             answer, history = gemini.ask(

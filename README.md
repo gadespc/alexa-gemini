@@ -7,7 +7,7 @@ del límite de 8 s de Alexa, clave en cabecera y respuestas limpias para voz.
 
 Uso: «Alexa, abre modo gemini» y preguntar. «Para» para salir.
 
-Notas para Claude: «apunta …» (o «dile a Claude …»). Alexa la repite y pregunta «¿Lo escribo?»; solo con «sí» la
+Notas para Claude: «apunta …», «dile a Claude …» o en una frase normal («… y apúntalo en la bandeja»). Alexa la repite y pregunta «¿Lo escribo?»; solo con «sí» la
 deja como issue en el repo privado `BANDEJA_REPO`. En el PC, `claude-bandeja` la pasa a «Para Claude.md» → Pendiente
 y cierra el issue.
 
