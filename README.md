@@ -5,7 +5,7 @@ Skill de Alexa (es-ES) que responde con Google Gemini. Adaptación de
 español, historial por sesión (el original lo compartía entre usuarios), modelo Flash para no pasar
 del límite de 8 s de Alexa, clave en cabecera y respuestas limpias para voz.
 
-Uso: «Alexa, abre modo géminis» y preguntar (el Echo transcribe «Gemini» como «géminis»; por eso la invocación lleva tilde y «s»). «Para» para salir.
+Uso: «Alexa, abre modo genio» y preguntar (el Echo transcribe «Gemini» unas veces como «gemini» y otras como «géminis»: por eso la invocación evita esa palabra). Límites de voz: Alexa deja de escuchar tras ~1 s de pausa y unos 8 s de frase, y la respuesta debe llegar en 8 s. «Para» para salir.
 
 Notas para Claude: «apunta …», «dile a Claude …» o en una frase normal («… y apúntalo en la bandeja»). Alexa la repite y pregunta «¿Lo escribo?»; solo con «sí» la
 deja como issue en el repo privado `BANDEJA_REPO`. En el PC, `claude-bandeja` la pasa a «Para Claude.md» → Pendiente
@@ -31,7 +31,7 @@ en ese repo) y `BANDEJA_REPO` (por defecto `gadespc/bandeja-alexa`).
   *Build* → *JSON Editor* → *Save* → *Build skill*.
 - Errores: *Code* → *CloudWatch Logs*.
 - Trampas conocidas: la importación deja la invocación en «change me» (*Build* → *Invocations* →
-  «modo géminis» → *Build skill*); el runtime es Python 3.8 y exige `urllib3` 1.x; la búsqueda en
+  «modo genio» → *Build skill*); el runtime es Python 3.8 y exige `urllib3` 1.x; la búsqueda en
   Google da 429 sin facturación en AI Studio y la skill responde entonces sin ella.
 
 ## Desarrollo
