@@ -178,6 +178,7 @@ def test_otra_pregunta_con_nota_pendiente_la_descarta_y_responde():
 @pytest.mark.parametrize("frase, nota", [
     ("revisa las copias de seguridad y apúntalo en la bandeja de obsidian", "revisa las copias de seguridad"),
     ("hazme un presupuesto para Ana y apúntalo", "hazme un presupuesto para Ana"),
+    ("hazme un presupuesto y apúnta lo", "hazme un presupuesto"),
     ("apúntalo en la bandeja: llamar al gestor", "llamar al gestor"),
     ("dile a claude que mire la web", "que mire la web"),
     ("cambia el logo, anótalo para Claude", "cambia el logo"),

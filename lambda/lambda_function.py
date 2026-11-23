@@ -35,7 +35,7 @@ _VERB = r"(?:ap[uú]nt|an[oó]t|gu[aá]rd|escr[ií]b|m[aá]nd|p[aá]s)\w*|dile"
 _DEST = r"(?:bandeja|obsidian|claude)(?:\s+de\s+(?:obsidian|claude))?"
 NOTE_REQUESTS = (
     re.compile(rf"\b(?:y\s+)?(?:{_VERB})\s+(?:(?:lo|la|en|a|para|al)\s+)*{_DEST}\b", re.IGNORECASE),
-    re.compile(r"\b(?:y\s+)?(?:ap[uú]nt|an[oó]t)[aá]l[oa]\b", re.IGNORECASE),
+    re.compile(r"\b(?:y\s+)?(?:ap[uú]nt|an[oó]t)[aá]\s?l[oa]\b", re.IGNORECASE),
 )
 
 
