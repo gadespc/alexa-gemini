@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "modo genio",
+      "invocationName": "modo gemini",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
